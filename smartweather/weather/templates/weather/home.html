@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Weather App</title>
+    <!-- Leaflet CSS for OpenStreetMap (free, no API key) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+		:root {
+			--bg: #0b1220;
+			--panel: #0f172a;
+			--panel-2: #111827;
+			--text: #e5e7eb;
+			--muted: #a1a1aa;
+			--primary: #38bdf8;
+			--primary-600: #0ea5e9;
+			--accent: #22d3ee;
+			--danger: #ef4444;
+			--success: #22c55e;
+			--shadow: 0 10px 30px rgba(2, 6, 23, 0.6);
+		}
+
+		* { box-sizing: border-box; }
+
+		body {
+			margin: 0;
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+			color: var(--text);
+			background:
+				radial-gradient(1200px 600px at 100% -10%, rgba(34,211,238,.10), transparent 40%),
+				radial-gradient(900px 500px at -10% 10%, rgba(56,189,248,.12), transparent 35%),
+				linear-gradient(180deg, #0b1220 0%, #0b1220 100%);
+		} 
+
+		.container {
+			max-width: 1200px;
+			margin: 0 auto;
+			padding: 24px 16px 40px;
+		}
+
+		.header {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 16px;
+			margin-bottom: 20px;
+		}
+		.brand {
+			display: flex;
+			align-items: center;
+			gap: 12px;
+		}
+		.brand-logo {
+			width: 36px; height: 36px;
+			border-radius: 10px;
+			background: linear-gradient(135deg, var(--primary), var(--accent));
+			box-shadow: var(--shadow);
+		}
+		.title {
+			margin: 0;
+			font-size: 22px;
+			font-weight: 700;
+			letter-spacing: .2px;
+		}
+		.subtitle {
+			margin: 2px 0 0 0;
+			font-size: 13px;
+			color: var(--muted);
+		}
+
+		/* Search panel */
+		.search-panel {
+			background: linear-gradient(180deg, rgba(15,23,42,.9), rgba(15,23,42,.85));
+			border: 1px solid rgba(148,163,184,.12);
+			border-radius: 14px;
+			box-shadow: var(--shadow);
+			padding: 18px;
+			margin: 16px 0 24px;
+		}
+        .search-box {
+            margin: 20px auto;
+        }
+        /* input[type="text"] {
+            padding: 10px;
+            width: 150px;
+            border: 2px solid #0077b6;
+            border-radius: 5px;
+            font-size: 16px;
+        } */
+		 
+		input[type="text"] {
+    		padding: 10px 15px;
+    		width: 200px;
+    		border: 2px solid #0077b6;
+    		border-radius: 8px;
+    		font-size: 16px;
+    		font-family: 'Poppins', sans-serif;
+    		outline: none;
+    		background-color: #f9f9f9;
+    		color: #333;
+    		transition: all 0.3s ease;
+    		box-shadow: 0 2px 4px rgba(0, 119, 182, 0.1);
+		}
+
+		input[type="text"]:focus {
+    		border-color: #00b4d8;
+    		background-color: #ffffff;
+    		box-shadow: 0 0 8px rgba(0, 180, 216, 0.4);
+    		transform: scale(1.02);
+		}
+
+		input[type="text"]::placeholder {
+    		color: #888;
+    		font-style: italic;
+		}
+
+        button {
+            padding: 10px 15px;
+			border: none;
+			padding: 12px 16px;
+			border-radius: 10px;
+			background: linear-gradient(135deg, var(--primary-600), var(--primary));
+			color: #06131f;
+			font-weight: 700;
+			cursor: pointer;
+			transition: transform .06s ease, filter .2s ease, box-shadow .2s ease;
+			box-shadow: 0 6px 18px rgba(56,189,248,.35);
+		}
+		.btn:hover { filter: brightness(1.05); }
+		.btn:active { transform: translateY(1px); }
+
+		.alert {
+			margin-top: 10px;
+			padding: 10px 12px;
+			border-radius: 10px;
+			background: rgba(239,68,68,.12);
+			border: 1px solid rgba(239,68,68,.35);
+			color: #fecaca;
+			text-align: left;
+		}
+
+		/* Current weather card */
+		.card {
+			background: linear-gradient(180deg, rgba(17,24,39,.9), rgba(17,24,39,.85));
+			border: 1px solid rgba(148,163,184,.12);
+			border-radius: 16px;
+			box-shadow: var(--shadow);
+			padding: 18px;
+			margin: 0 0 18px 0;
+			max-width: none;
+			text-align: left;
+		}
+		.card-header {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 16px;
+			margin-bottom: 8px;
+		}
+		.city {
+			margin: 0;
+			font-size: 24px;
+			font-weight: 800;
+		}
+		.description { color: var(--muted); margin: 0; font-size: 14px; }
+		.current {
+			display: grid;
+			grid-template-columns: 1fr auto;
+			gap: 12px;
+			align-items: center;
+		}
+		.temp {
+			font-size: 44px;
+			font-weight: 800;
+			margin: 0;
+			letter-spacing: -1px;
+		}
+		.meta { color: var(--muted); margin: 2px 0 0 0; }
+		.icon-xl { width: 84px; height: 84px; image-rendering: -webkit-optimize-contrast; }
+
+		/* Forecast grid */
+		.section-title { margin: 18px 0 10px; font-size: 16px; color: var(--muted); font-weight: 700; letter-spacing: .2px; }
+		.grid {
+			display: grid;
+			grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+			gap: 12px;
+		}
+		.tile {
+			background: linear-gradient(180deg, rgba(15,23,42,.9), rgba(15,23,42,.85));
+			border: 1px solid rgba(148,163,184,.12);
+			border-radius: 14px;
+			padding: 12px;
+			text-align: center;
+		}
+		.tile h4 { margin: 0 0 6px; font-size: 14px; font-weight: 700; }
+		.icon-md { width: 56px; height: 56px; }
+		.small { color: var(--muted); font-size: 13px; margin: 4px 0 0 0; }
+
+		/* Layout grid */
+		.layout {
+			display: grid;
+			grid-template-columns: 1.6fr 1fr; /* ~62% / 38% */
+			gap: 16px;
+		}
+		.sidebar {
+			display: flex;
+			flex-direction: column;
+			gap: 16px;
+		}
+
+		/* Assistant & Map cards */
+		.card-ghost {
+			background: linear-gradient(180deg, rgba(15,23,42,.9), rgba(15,23,42,.85));
+			border: 1px solid rgba(148,163,184,.12);
+			border-radius: 14px;
+			padding: 14px;
+			box-shadow: var(--shadow);
+		}
+		.card-ghost h3 { margin: 2px 0 10px; font-size: 16px; color: var(--muted); }
+		/* Travel planner */
+		.planner-form {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 10px;
+		}
+		.planner-row {
+			display: grid;
+			grid-template-columns: 1fr 1fr auto;
+			gap: 10px;
+		}
+		.select {
+			appearance: none;
+			padding: 12px 14px;
+			border-radius: 10px;
+			border: 1px solid rgba(148,163,184,.22);
+			background: #0b1220;
+			color: var(--text);
+			font-size: 15px;
+		}
+		.planner-actions { display: flex; gap: 10px; margin-top: 10px; }
+		.planner-results { margin-top: 12px; padding: 10px; border-radius: 10px; background: rgba(2,6,23,.4); border: 1px solid rgba(148,163,184,.08); }
+		.planner-meta { color: var(--muted); font-size: 13px; }
+		.assistant-messages {
+			height: 260px;
+			overflow: auto;
+			padding: 8px;
+			border-radius: 10px;
+			background: rgba(2,6,23,.4);
+			border: 1px solid rgba(148,163,184,.08);
+		}
+		.msg { margin: 8px 0; }
+		.msg.user { text-align: right; }
+		.msg .bubble {
+			display: inline-block;
+			padding: 8px 10px;
+			border-radius: 10px;
+			max-width: 85%;
+		}
+		.msg.user .bubble { background: rgba(34,211,238,.12); border: 1px solid rgba(34,211,238,.35); }
+		.msg.bot .bubble { background: rgba(56,189,248,.12); border: 1px solid rgba(56,189,248,.35); }
+		.assistant-input {
+			display: grid;
+			grid-template-columns: 1fr auto;
+			gap: 10px;
+			margin-top: 10px;
+		}
+		.map-box {
+			height: 320px;
+			border-radius: 10px;
+			background: rgba(2,6,23,.4);
+			border: 1px solid rgba(148,163,184,.08);
+			position: relative;
+			overflow: hidden;
+		}
+		.map-placeholder { 
+			position: absolute; 
+			inset: 0; 
+			display: grid; 
+			place-items: center; 
+			color: var(--muted); 
+			font-size: 14px; 
+			z-index: 1;
+			background: rgba(2,6,23,.4);
+		}
+		
+		/* Leaflet map container */
+		#routeMap .leaflet-container {
+			height: 100%;
+			width: 100%;
+			background: #1a2332;
+			border-radius: 10px;
+		}
+		
+		/* Dark mode leaflet */
+		.leaflet-container {
+			background: #1a2332 !important;
+		}
+
+		.footer { margin-top: 28px; color: var(--muted); font-size: 12px; text-align: center; }
+
+		@media (max-width: 520px) {
+			.search-form { grid-template-columns: 1fr; }
+			.temp { font-size: 36px; }
+			.icon-xl { width: 72px; height: 72px; }
+			.layout { grid-template-columns: 1fr; }
+		}
+    </style>
+</head>
+<body>
+	<div class="container">
+		<div class="header">
+			<div class="brand">
+				<div class="brand-logo"></div>
+				<div>
+					<p class="title">Smart Travel Weather Assistant</p>
+					<p class="subtitle">Because every great trip starts with the right forecast</p>
+				</div>
+			</div>
+		</div>
+
+		<!-- Search -->
+		<div class="search-panel">
+			<form method="get" class="search-form" novalidate>
+				<input class="input" type="text" name="city" placeholder="Search city (e.g. London, Tokyo)" value="{{ data.city }}">
+				<button class="btn" type="submit">Search</button>
+			</form>
+			{% if error_message %}
+				<div class="alert">{{ error_message }}</div>
+			{% endif %}
+		</div>
+
+		<div class="layout">
+			<!-- LEFT: Weather UI -->
+			<div>
+				<!-- Current weather -->
+				<div class="card">
+					<div class="card-header">
+						<div>
+							<p class="city">{{ data.city }}</p>
+							<p class="description">{{ data.description|title }}</p>
+						</div>
+					</div>
+					<div class="current">
+						<div>
+							<p class="temp">{{ data.temperature }}°C</p>
+							<p class="meta">Feels like {{ data.feels_like }}° • {{ data.temp_min }}° / {{ data.temp_max }}°</p>
+						</div>
+						<div>
+							<img class="icon-xl" src="https://openweathermap.org/img/w/{{ data.icon }}.png" alt="weather icon">
+						</div>
+					</div>
+				</div>
+
+				<!-- Hourly forecast -->
+				<p class="section-title">Hourly forecast</p>
+				<div class="grid">
+					{% for h in data.hourly %}
+						<div class="tile">
+							<h4>{{ h.time }}</h4>
+							<img class="icon-md" src="https://openweathermap.org/img/w/{{ h.icon }}.png" alt="hour icon">
+							<p><strong>{{ h.temp }}°C</strong></p>
+							<p class="small">Rain: {{ h.rain }}%</p>
+						</div>
+					{% endfor %}
+				</div>
+
+				<!-- Daily forecast -->
+				<p class="section-title">Next 3 days</p>
+				<div class="grid">
+					{% for d in data.forecast_daily %}
+						<div class="tile">
+							<h4>{{ d.date }}</h4>
+							<img class="icon-md" src="https://openweathermap.org/img/w/{{ d.icon }}.png" alt="day icon">
+							<p><strong>{{ d.min }}° / {{ d.max }}°C</strong></p>
+							<p class="small">Rain: {{ d.rain }}%</p>
+						</div>
+					{% endfor %}
+				</div>
+			</div>
+
+			<!-- RIGHT: Assistant + Map -->
+			<aside class="sidebar">
+				<div class="card-ghost">
+					<h3>Smart Travel Planner</h3>
+					<div class="planner-form" aria-label="Travel planner form">
+						<input class="input" type="text" placeholder="Origin (city or address)">
+						<input class="input" type="text" placeholder="Destination (city or address)">
+					</div>
+					<div class="planner-row" style="margin-top:10px">
+						<button class="btn" type="button">Swap</button>
+						<button class="btn" type="button">Clear</button>
+						<button class="btn" type="button" aria-label="Plan route">Plan</button>
+					</div>
+					<div class="planner-results" id="plannerResults">
+						<p id="plannerTitle"><strong>Route summary</strong></p>
+						<p class="planner-meta" id="plannerMeta">Distance: — • Duration: —</p>
+					</div>
+				</div>
+				
+
+				<div class="card-ghost">
+					<h3>Smart Travel Map</h3>
+					<div class="map-box" id="routeMap">
+						<div class="map-placeholder" id="mapPlaceholder">Enter origin and destination to see route on map</div>
+					</div>
+				</div>
+
+				<!--Smart Assistant Section-->
+				<div class="card-ghost">
+					<h3>Smart Assistant</h3>
+					<div class="assistant-messages" id="assistantMessages">
+						<div class="msg bot"><span class="bubble">Hi! Ask me about weather, forecasts, or travel routes.</span></div>
+					</div>
+					<div class="assistant-input">
+						<input class="input" id="assistantInput" type="text" placeholder="Type a message..." aria-label="Assistant input">
+						<button class="btn" type="button" id="assistantSend">Send</button>
+					</div>
+				</div>	
+			</aside>
+		</div>
+
+		<p class="footer">© 2025 All Rights Reserved</p>
+	</div>
+
+	<script>
+		// Smart Assistant JavaScript (Frontend + Backend integration)
+		const assistantMessages = document.getElementById('assistantMessages');
+		const assistantInput = document.getElementById('assistantInput');
+		const assistantSend = document.getElementById('assistantSend');
+		
+		// Map variables
+		let map = null;
+		let routeLayer = null;
+		let markers = [];
+		let currentRoute = null;
+		
+		// Get current city from the page
+		function getCurrentCity() {
+			try {
+				const cityElement = document.querySelector('.city');
+				return cityElement ? cityElement.textContent.trim() : '';
+			} catch (e) {
+				return '';
+			}
+		}
+		
+		// Initialize map
+		function initMap() {
+			const mapContainer = document.getElementById('routeMap');
+			const placeholder = document.getElementById('mapPlaceholder');
+			
+			// Hide placeholder
+			if (placeholder) {
+				placeholder.style.display = 'none';
+			}
+			
+			// Create map if not exists
+			if (!map) {
+				map = L.map('routeMap', {
+					zoomControl: true,
+					attributionControl: false
+				});
+				
+				// Add OpenStreetMap tiles (free, no API key)
+				L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+					attribution: '© OpenStreetMap contributors',
+					maxZoom: 18
+				}).addTo(map);
+				
+				// Set initial view (India center)
+				map.setView([20.5937, 78.9629], 5);
+				
+				// Add attribution control with styling
+				L.control.attribution({ position: 'bottomright' }).addTo(map);
+			}
+		}
+		
+		// Display route on map
+		function displayRoute(origin, dest, routeGeometry) {
+			// Initialize map if not already done
+			initMap();
+			
+			// Clear existing markers
+			markers.forEach(marker => map.removeLayer(marker));
+			markers = [];
+			
+			// Clear existing route
+			if (routeLayer) {
+				map.removeLayer(routeLayer);
+				routeLayer = null;
+			}
+			
+			// Add origin marker (green)
+			const originIcon = L.divIcon({
+				className: 'custom-marker',
+				html: '<div style="background: #22c55e; width: 24px; height: 24px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3);"></div>',
+				iconSize: [24, 24],
+				iconAnchor: [12, 12]
+			});
+			const originMarker = L.marker([origin.lat, origin.lng], { icon: originIcon })
+				.addTo(map)
+				.bindPopup('Origin: ' + origin.name);
+			markers.push(originMarker);
+			
+			// Add destination marker (red)
+			const destIcon = L.divIcon({
+				className: 'custom-marker',
+				html: '<div style="background: #ef4444; width: 24px; height: 24px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3);"></div>',
+				iconSize: [24, 24],
+				iconAnchor: [12, 12]
+			});
+			const destMarker = L.marker([dest.lat, dest.lng], { icon: destIcon })
+				.addTo(map)
+				.bindPopup('Destination: ' + dest.name);
+			markers.push(destMarker);
+			
+			// Draw route line if geometry exists
+			if (routeGeometry && routeGeometry.coordinates) {
+				const routeCoordinates = routeGeometry.coordinates.map(coord => [coord[1], coord[0]]); // Convert [lng,lat] to [lat,lng]
+				routeLayer = L.polyline(routeCoordinates, {
+					color: '#38bdf8',
+					weight: 4,
+					opacity: 0.8
+				}).addTo(map);
+				
+				// Fit map to show both markers and route
+				map.fitBounds([...routeCoordinates, [origin.lat, origin.lng], [dest.lat, dest.lng]], {
+					padding: [20, 20]
+				});
+			} else {
+				// Fit map to show both markers
+				map.fitBounds([[origin.lat, origin.lng], [dest.lat, dest.lng]], {
+					padding: [50, 50]
+				});
+			}
+			
+			// Store current route
+			currentRoute = { origin, dest, routeGeometry };
+		}
+		
+		// Store route data globally
+		let currentOriginLoc = null;
+		let currentDestLoc = null;
+
+		// Knowledge base for responses (pre-written)
+		const responses = {
+			greetings: [
+				"Hello! I'm your smart weather assistant. I can help you with weather forecasts, travel planning, and more!",
+				"Hi there! Ask me anything about weather conditions, forecasts, or travel routes.",
+				"Hey! I'm here to help with weather insights and travel planning."
+			],
+			rain: [
+				"Check the hourly forecast tiles above to see the rain probability for each hour. The percentages show the chance of precipitation.",
+				"For detailed rain information, look at the 'Hourly forecast' and 'Next 3 days' sections. Each tile shows the rain probability."
+			],
+			temperature: [
+				"The current temperature is displayed on the main card. You can see the actual temp, feels like, and the min/max range.",
+				"Temperature details are shown prominently on the left panel. Want me to explain what the different temperatures mean?"
+			],
+			forecast: [
+				"The hourly forecast shows the next 6 intervals with temperature, weather icon, and rain probability.",
+				"You can see the next 3 days forecast below the hourly section. Each day shows min/max temps and rain chances.",
+				"Scroll to view detailed hourly and daily forecasts for the upcoming days."
+			],
+			travel: [
+				"Use the Smart Travel Planner above to enter origin and destination. I'll help you plan the best route!",
+				"The travel planner can help you find the best route between two cities. Try entering your origin and destination.",
+				"I can assist with travel route planning. Check out the Smart Travel Planner section for more options."
+			],
+			default: [
+				"I understand. Can you be more specific? Try asking about weather, forecasts, rain, temperature, or travel routes.",
+				"I'm here to help! Try asking about weather conditions, travel planning, or forecasts.",
+				"Could you rephrase that? I can help with weather forecasts and travel planning questions."
+			]
+		};
+
+		// Helper function to get response based on intent
+		function getResponse(message) {
+			const lower = message.toLowerCase();
+			
+			if (lower.match(/\b(hello|hi|hey|greetings|good morning|good afternoon|good evening)\b/)) {
+				return responses.greetings[Math.floor(Math.random() * responses.greetings.length)];
+			} else if (lower.match(/\b(rain|raining|rainy|precipitation|rain forecast|rain chance)\b/)) {
+				return responses.rain[Math.floor(Math.random() * responses.rain.length)];
+			} else if (lower.match(/\b(temp|temperature|hot|cold|warm|cool|feel|feels like)\b/)) {
+				return responses.temperature[Math.floor(Math.random() * responses.temperature.length)];
+			} else if (lower.match(/\b(forecast|forecasts|hourly|daily|future|upcoming|next days|tomorrow)\b/)) {
+				return responses.forecast[Math.floor(Math.random() * responses.forecast.length)];
+			} else if (lower.match(/\b(travel|route|journey|trip|destination|origin|map)\b/)) {
+				return responses.travel[Math.floor(Math.random() * responses.travel.length)];
+			} else if (lower.match(/\b(weather|weather today|conditions|clouds|sunny|cloudy)\b/)) {
+				return "Check the main weather card on the left for current conditions. The description, temperature, and forecast are all visible there!";
+			} else if (lower.match(/\b(help|what can you do|capabilities|features)\b/)) {
+				return "I can help you with: 1) Current weather information, 2) Hourly and daily forecasts, 3) Rain probabilities, 4) Temperature details, 5) Travel route planning. Just ask!";
+			} else if (lower.match(/\b(wind|windy|humidity|pressure|visibility)\b/)) {
+				return "For detailed wind, humidity, pressure, and visibility data, I'd need to enhance the weather API integration. The current display shows temperature, feels like, and precipitation forecasts.";
+			} else if (lower.match(/\b(clear|reset|start over|new)\b/)) {
+				return "I'm ready for your questions! Ask me about weather, forecasts, or travel planning.";
+			} else {
+				return responses.default[Math.floor(Math.random() * responses.default.length)];
+			}
+		}
+
+		// Add message to chat
+		function addMessage(text, isUser = false) {
+			const msgDiv = document.createElement('div');
+			msgDiv.className = `msg ${isUser ? 'user' : 'bot'}`;
+			msgDiv.innerHTML = `<span class="bubble">${text}</span>`;
+			assistantMessages.appendChild(msgDiv);
+			assistantMessages.scrollTop = assistantMessages.scrollHeight;
+		}
+
+		// Handle send button click
+		assistantSend.addEventListener('click', function() {
+			handleAssistantMessage();
+		});
+
+		// Main function to handle assistant messages
+		async function handleAssistantMessage() {
+			const message = assistantInput.value.trim();
+			if (!message) return;
+			
+			// Add user message
+			addMessage(message, true);
+			assistantInput.value = '';
+			
+			// Try backend API first
+			try {
+				const city = getCurrentCity();
+				const response = await fetch('/assistant/', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						'X-CSRFToken': getCookie('csrftoken')
+					},
+					body: JSON.stringify({
+						message: message,
+						city: city
+					})
+				});
+				
+				if (response.ok) {
+					const data = await response.json();
+					if (data.ok && data.reply) {
+						// Use backend response
+						addMessage(data.reply, false);
+						return;
+					}
+				}
+			} catch (e) {
+				// Backend failed, fall back to frontend
+				console.log('Backend unavailable, using frontend responses');
+			}
+			
+			// Fallback to frontend responses
+			setTimeout(() => {
+				const reply = getResponse(message);
+				addMessage(reply, false);
+			}, 300);
+		}
+		
+		// Helper to get CSRF token
+		function getCookie(name) {
+			let cookieValue = null;
+			if (document.cookie && document.cookie !== '') {
+				const cookies = document.cookie.split(';');
+				for (let i = 0; i < cookies.length; i++) {
+					const cookie = cookies[i].trim();
+					if (cookie.substring(0, name.length + 1) === (name + '=')) {
+						cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+						break;
+					}
+				}
+			}
+			return cookieValue;
+		}
+
+		// Handle Enter key
+		assistantInput.addEventListener('keypress', function(e) {
+			if (e.key === 'Enter') {
+				handleAssistantMessage();
+			}
+		});
+
+		// Travel Planner functionality
+		const originInput = document.querySelector('.planner-form input:first-child');
+		const destInput = document.querySelector('.planner-form input:last-child');
+		const swapBtn = document.querySelector('.planner-row button:first-child');
+		const clearBtn = document.querySelector('.planner-row button:nth-child(2)');
+		const planBtn = document.querySelector('.planner-row button:last-child');
+
+		// Swap locations
+		swapBtn.addEventListener('click', function() {
+			const temp = originInput.value;
+			originInput.value = destInput.value;
+			destInput.value = temp;
+			if (originInput.value && destInput.value) {
+				addMessage(`Swapped: ${destInput.value} ↔ ${originInput.value}`, true);
+				setTimeout(() => {
+					addMessage(`Locations swapped! Ready to plan the reverse route.`, false);
+				}, 300);
+			}
+		});
+
+		// Clear inputs
+		clearBtn.addEventListener('click', function() {
+			originInput.value = '';
+			destInput.value = '';
+			document.getElementById('plannerTitle').innerHTML = '<strong>Route summary</strong>';
+			document.getElementById('plannerMeta').textContent = 'Distance: — • Duration: —';
+			
+			// Clear map
+			if (markers.length > 0) {
+				markers.forEach(marker => map.removeLayer(marker));
+				markers = [];
+			}
+			if (routeLayer) {
+				map.removeLayer(routeLayer);
+				routeLayer = null;
+			}
+			// Reset map view
+			if (map) {
+				map.setView([20.5937, 78.9629], 5); // Reset to India center
+			}
+			
+			// Show placeholder
+			const placeholder = document.getElementById('mapPlaceholder');
+			if (placeholder) {
+				placeholder.style.display = 'grid';
+			}
+			
+			addMessage('Cleared route planner.', true);
+			setTimeout(() => {
+				addMessage('Ready to plan a new route. Enter origin and destination above!', false);
+			}, 300);
+		});
+
+		// Plan route with real API integration
+		planBtn.addEventListener('click', async function() {
+			const origin = originInput.value.trim();
+			const dest = destInput.value.trim();
+			
+			if (!origin || !dest) {
+				addMessage(`Planning route... Please enter both origin and destination.`, true);
+				setTimeout(() => {
+					addMessage(`Error: Both origin and destination are required to plan a route.`, false);
+				}, 300);
+				return;
+			}
+			
+			// Add to assistant
+			addMessage(`Planning route from ${origin} to ${dest}...`, true);
+			
+			try {
+				// Step 1: Geocode origin
+				const originResults = await geocodeLocation(origin);
+				if (!originResults || originResults.length === 0) {
+					throw new Error(`Could not find location: ${origin}`);
+				}
+				const originLocation = originResults[0]; // Use first result
+				
+				// Step 2: Geocode destination
+				const destResults = await geocodeLocation(dest);
+				if (!destResults || destResults.length === 0) {
+					throw new Error(`Could not find location: ${dest}`);
+				}
+				const destLocation = destResults[0]; // Use first result
+				
+				// Store locations
+				currentOriginLoc = { lat: originLocation.lat, lng: originLocation.lng, name: origin };
+				currentDestLoc = { lat: destLocation.lat, lng: destLocation.lng, name: dest };
+				
+				// Step 3: Get route
+				const route = await fetchRoute(originLocation, destLocation);
+				
+				// Step 4: Display results
+				const distanceKm = (route.distance_m / 1000).toFixed(1);
+				const durationHours = Math.floor(route.duration_s / 3600);
+				const durationMinutes = Math.floor((route.duration_s % 3600) / 60);
+				
+				document.getElementById('plannerTitle').innerHTML = `<strong>Route: ${origin} → ${dest}</strong>`;
+				document.getElementById('plannerMeta').textContent = 
+					`Distance: ${distanceKm} km • Duration: ~${durationHours}h ${durationMinutes}m`;
+				
+				// Step 5: Display route on map
+				try {
+					displayRoute(
+						{ lat: originLocation.lat, lng: originLocation.lng, name: origin },
+						{ lat: destLocation.lat, lng: destLocation.lng, name: dest },
+						route.geometry
+					);
+				} catch (mapError) {
+					console.error('Map display error:', mapError);
+					// Continue anyway, route info is already displayed
+				}
+				
+				// Success message
+				setTimeout(() => {
+					addMessage(`🧭 I’ve mapped your journey! It’s approximately ${distanceKm} km away and should take ${durationHours}h ${durationMinutes}m. You can see the route on the map!`, false);
+					// addMessage(`Route planned successfully! 📍 Distance: ${distanceKm} km, estimated time: ${durationHours}h ${durationMinutes}m. Check the map!`, false);
+				}, 500);
+				
+			} catch (error) {
+				console.error('Route planning error:', error);
+				setTimeout(() => {
+					addMessage(`Error: ${error.message}`, false);
+				}, 500);
+			}
+		});
+		
+		// Geocode a location
+		async function geocodeLocation(query) {
+			try {
+				const response = await fetch(`/geo/search?query=${encodeURIComponent(query)}&limit=1`);
+				if (!response.ok) {
+					throw new Error('Geocoding failed');
+				}
+				const data = await response.json();
+				if (!data.ok || !data.results) {
+					throw new Error('No results found');
+				}
+				return data.results;
+			} catch (error) {
+				console.error('Geocoding error:', error);
+				throw error;
+			}
+		}
+		
+		// Fetch route from backend
+		async function fetchRoute(origin, dest) {
+			try {
+				const response = await fetch('/route/plan', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						'X-CSRFToken': getCookie('csrftoken')
+					},
+					body: JSON.stringify({
+						origin: { lat: origin.lat, lng: origin.lng },
+						destination: { lat: dest.lat, lng: dest.lng },
+						mode: 'driving'
+					})
+				});
+				
+				if (!response.ok) {
+					throw new Error('Route planning failed');
+				}
+				
+				const data = await response.json();
+				if (!data.ok || !data.route) {
+					throw new Error('No route found');
+				}
+				
+				return data.route;
+			} catch (error) {
+				console.error('Route fetch error:', error);
+				throw error;
+			}
+		}
+
+	</script>
+</body>
+</html>
